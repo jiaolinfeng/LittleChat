@@ -2,6 +2,14 @@
 #include <string>
 #include "poller.h"
 
+int IPoller::setnonblocking(fd_t fd)
+{
+    int old_option = fcntl(fd, F_GETFL);
+    int new_option = old_option | O_NONBLOCK;
+    fcntl(fd, F_SETFL, new_option);
+    return old_option;
+}
+
 EPoller::EPoller() : epoll_fd_(0)
 {
     epoll_fd_ = epoll_create(1);
@@ -19,7 +27,10 @@ int EPoller::addFd(fd_t fd, int flag)
     if (flag & POLL_WRITE)
         event.events |= EPOLLOUT;
     if (flag & EPOLL_ET)
+    {
         event.events |= EPOLLET;
+        setnonblocking(fd);
+    }
     event.events |= (EPOLLERR | EPOLLHUP);
     return epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, fd, &event);
 }
@@ -49,7 +60,7 @@ int EPoller::poll(int timeout)
 {
     if (!handler_)
         return -1;
-    epoll_event events[MAX_EVENT_NUMBER];
+    epoll_event events[EPOLL_WAIT_MAX];
     int ret = epoll_wait(epoll_fd_, events, EPOLL_WAIT_MAX, timeout);
     if (ret < 0)
         return -1;
