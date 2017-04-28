@@ -31,11 +31,11 @@ int Server::start()
         memset(&server_addr, 0, sizeof(server_addr));
         server_addr.sin_family = AF_INET;
         server_addr.sin_port = htons(8888);
-        server_addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+        server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
         ret = bind(server_, (struct sockaddr *)&server_addr, sizeof(server_addr));
         if (ret == -1)
             throw std::string("Server::start() : bind failed");
-        ret = listen(server_, 10);
+        ret = listen(server_, CLIENT_NUM_MAX);
         if (ret == -1)
             throw std::string("Server::start() : listen failed");
         ret = 0;
@@ -117,6 +117,7 @@ void Server::handleInput(IPoller *poller, fd_t fd)
         {
             close(fd);
             clients_.erase(fd);
+            poller->rmFd(fd);
             printf("a client disconnected! id : %d\n", fd);
             return;
         }
@@ -145,6 +146,7 @@ void Server::handleError(IPoller *poller, fd_t fd)
     printf("handler error");
     close(fd);
     clients_.erase(fd);
+    poller->rmFd(fd);
     printf("a client disconnected! id : %d\n", fd);
 }
 
